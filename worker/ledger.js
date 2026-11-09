@@ -19,6 +19,8 @@ function validLedger(data) {
     if (!member || typeof member.id !== "string" || !/^[a-z0-9]{1,40}$/.test(member.id) ||
         members.has(member.id) || typeof member.name !== "string" || !member.name.trim() ||
         member.name.length > 70 || !monthPattern.test(member.since)) return false;
+    const fee = member.registrationFee;
+    if (fee !== undefined && (!Number.isSafeInteger(fee) || fee < 0 || fee > moneyLimit)) return false;
     members.set(member.id, member);
   }
   for (const [month, amounts] of Object.entries(data.amounts)) {
@@ -33,7 +35,8 @@ function validLedger(data) {
 
 function applyTarget(ledger) {
   return {members:ledger.members.map(member => ({
-    id:member.id, name:member.name, since:member.since, target:monthlyTarget
+    id:member.id, name:member.name, since:member.since, target:monthlyTarget,
+    registrationFee:member.registrationFee ?? 0
   })), amounts:ledger.amounts};
 }
 

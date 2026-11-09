@@ -22,15 +22,23 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 .report summary{cursor:pointer;padding:15px 21px;font-weight:750}
 .report .report-caption{padding:0 21px 12px}
 .report tfoot{background:#f6f8f2;font-weight:750}
+.views{display:flex;gap:8px;margin:0 0 20px}
+.views button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap"><div class="brand"><span class="mark" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(45 12 12)"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(-45 12 12)"/></svg></span>Savings Circle</div><div class="head-badges"><span id="role" class="badge">View only</span></div></div></header>
 <main class="wrap">
+<nav class="views" aria-label="Savings Circle sections">
+<button class="btn" id="show-savings" aria-controls="savings" aria-pressed="true">Monthly savings</button>
+<button class="btn" id="show-registration" aria-controls="registration" aria-pressed="false">Registration</button>
+</nav>
+<p id="notice" class="notice" role="status">Loading the shared ledger…</p>
+<section id="savings" aria-label="Monthly savings">
 <p class="eyebrow">Group savings tracker</p>
 <div class="heading"><div><h1>Monthly contributions</h1><p>See what each member has saved and how much is still due.</p></div>
 <div class="month"><button id="prev" aria-label="Previous month">&#8249;</button><input id="month" type="month" min="1900-01" max="9999-12" aria-label="Contribution month"><button id="next" aria-label="Next month">&#8250;</button></div></div>
-<p id="notice" class="notice" role="status">Loading the shared ledger…</p><section class="metrics" aria-label="Monthly summary">
+<section class="metrics" aria-label="Monthly summary">
 <div class="metric hero"><svg class="motif" viewBox="0 0 160 160" fill="none" stroke="currentColor"><circle cx="80" cy="80" r="65"/><ellipse cx="80" cy="80" rx="25" ry="65"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(30 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(60 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(90 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(120 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(150 80 80)"/></svg><div class="label">Total contributed</div><div id="total" class="value"></div><div id="progress-label" class="detail"></div><div class="progress" aria-hidden="true"><span id="progress"></span></div></div>
 <div class="metric"><div class="label">Still due</div><div id="due" class="value"></div><div class="detail">Across member targets</div></div>
 <div class="metric"><div class="label">Members paid in full</div><div id="paid-count" class="value"></div><div id="paid-detail" class="detail"></div></div>
@@ -50,6 +58,17 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 <tbody id="report-rows"></tbody><tfoot id="report-totals"></tfoot>
 </table></div>
 </details>
+</section>
+<section id="registration" aria-labelledby="registration-title" hidden>
+<p class="eyebrow">Member register</p>
+<div class="heading"><div><h1 id="registration-title">Registration</h1><p>One-time registration fees and member start months.</p></div>
+<button class="btn primary" id="new-joiner" hidden>+ New joiner</button></div>
+<section class="panel" aria-labelledby="registration-fees-title">
+<div class="panel-head"><div><h2 id="registration-fees-title">Registration fees</h2><p id="registration-total"></p></div></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Registration fees table">
+<table><thead><tr><th scope="col">Member</th><th scope="col">First savings month</th><th scope="col">Fee received</th><th scope="col" id="registration-action" hidden>Action</th></tr></thead>
+<tbody id="registration-rows"></tbody></table>
+</div></section></section>
 <footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form></footer>
 </main>
 <dialog id="dialog"><form id="form"><h2 id="form-title"></h2><p id="form-detail"></p><div id="fields"></div><p class="form-error" id="error" role="alert"></p><div class="dialog-actions"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn primary" id="submit" type="submit">Save</button></div></form></dialog>
@@ -75,6 +94,7 @@ let monthlyTarget = 0;
 let canEdit = false;
 let saving = false;
 let loaded = false;
+let view = "savings";
 const active = (period = month) => state.members.filter(member => member.since <= period);
 const amountFor = (member, period = month) => state.amounts[period]?.[member.id] ?? 0;
 function monthlyRows(period) {
@@ -154,6 +174,45 @@ function flash(message, error = false) {
   el("flash").textContent = message;
   el("flash").classList.toggle("error", error);
 }
+function renderRegistration() {
+  el("new-joiner").hidden = el("registration-action").hidden = !canEdit;
+  const table = el("registration-rows");
+  table.replaceChildren();
+  let fees = 0;
+  for (const member of state.members) {
+    const fee = member.registrationFee ?? 0;
+    fees += fee;
+    const row = table.insertRow();
+    row.insertCell().textContent = member.name;
+    row.insertCell().textContent = monthLabel(member.since);
+    row.insertCell().textContent = fee ? money(fee) : "No fee recorded";
+    if (canEdit) {
+      const edit = document.createElement("button");
+      edit.className = "btn edit";
+      edit.textContent = "Edit fee";
+      edit.setAttribute("aria-label", "Edit registration fee for " + member.name);
+      edit.addEventListener("click", () => editRegistrationFee(member));
+      row.insertCell().append(edit);
+    }
+  }
+  el("registration-total").textContent = loaded ? money(fees) + " received from registration fees" : "";
+  if (!state.members.length) {
+    const cell = table.insertRow().insertCell();
+    cell.colSpan = canEdit ? 4 : 3;
+    cell.className = "empty";
+    cell.textContent = loaded ? "No members registered yet." : "No registration data to display yet.";
+  }
+}
+function showView(nextView) {
+  view = nextView;
+  for (const section of ["savings", "registration"]) {
+    const selected = section === view;
+    el(section).hidden = !selected;
+    el("show-" + section).setAttribute("aria-pressed", String(selected));
+  }
+  flash("");
+  if (view === "registration") renderRegistration();
+}
 function render() {
   const rows = monthlyRows(month);
   const {total, target, due, paid, covered} = summarize(rows);
@@ -204,6 +263,7 @@ function render() {
   el("progress").style.width = progress + "%";
   renderReminder(rows, due);
   renderReport();
+  if (view === "registration") renderRegistration();
 }
 async function loadLedger() {
   try {
@@ -248,7 +308,7 @@ async function save(next, message) {
       state = next;
       dialog.close();
       render();
-      if (returnFocus && !returnFocus.isConnected) el("add").focus();
+      if (returnFocus && !returnFocus.isConnected) el(view === "registration" ? "new-joiner" : "add").focus();
       flash(message);
     }
   } catch {
@@ -310,19 +370,38 @@ function contribution(member, edit) {
     save({...state, amounts: {...state.amounts, [month]: {...prior, [id]: updated}}}, "Contribution saved.");
   });
 }
-el("add").addEventListener("click", () => {
+function addMember() {
   const name = input("name", "text");
   name.maxLength = 70;
-  openForm("Add member", "This member will appear from " + monthLabel(month) + " onward with a monthly target of " + money(monthlyTarget) + ".", [field("Member name", name)], "Add member", data => {
+  const since = input("since", "month");
+  Object.assign(since, {value:month, min:"1900-01", max:"9999-12"});
+  const fee = input("fee", "number");
+  fee.required = false;
+  const fields = [field("Member name", name), field("First savings month", since), field("Registration fee received (UGX)", fee)];
+  openForm("New joiner", "The member will appear from their first savings month onward. Enter a fee if it has been received.", fields, "Add member", data => {
     const value = data.get("name").trim();
     if (!value) {
       el("error").textContent = "Enter a member name.";
       return;
     }
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
-    save({...state, members: [...state.members, {id, name: value, since: month}]}, "Member added.");
+    const member = {id, name:value, since:data.get("since"), registrationFee:Number(data.get("fee"))};
+    save({...state, members: [...state.members, member]}, "Member added.");
   });
-});
+}
+function editRegistrationFee(member) {
+  const fee = input("fee", "number");
+  fee.value = member.registrationFee ?? 0;
+  openForm("Edit registration fee", member.name + " · Enter the total fee received.", [field("Registration fee received (UGX)", fee)], "Save fee", data => {
+    const members = state.members.map(entry => entry.id === member.id
+      ? {...entry, registrationFee:Number(data.get("fee"))} : entry);
+    save({...state, members}, "Registration fee saved.");
+  });
+}
+el("add").addEventListener("click", addMember);
+el("new-joiner").addEventListener("click", addMember);
+el("show-savings").addEventListener("click", () => showView("savings"));
+el("show-registration").addEventListener("click", () => showView("registration"));
 el("form").addEventListener("submit", event => {
   event.preventDefault();
   action(new FormData(event.currentTarget));
