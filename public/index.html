@@ -18,7 +18,7 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><div class="brand"><span class="mark" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(45 12 12)"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(-45 12 12)"/></svg></span>Savings Circle</div><div class="head-badges"><span id="demo-badge" class="badge" hidden>Sample data</span><span id="role" class="badge">View only</span></div></div></header>
+<header class="top"><div class="wrap"><div class="brand"><span class="mark" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(45 12 12)"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(-45 12 12)"/></svg></span>Savings Circle</div><div class="head-badges"><span id="role" class="badge">View only</span></div></div></header>
 <main class="wrap">
 <p class="eyebrow">Group savings tracker</p>
 <div class="heading"><div><h1>Monthly contributions</h1><p>See what each member has saved and how much is still due.</p></div>
@@ -32,7 +32,7 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 <div class="panel-head"><div><h2 id="list-title">Member ledger</h2><p id="period"></p></div><div class="actions" id="actions" hidden><button class="btn" id="add">Add member</button><button class="btn primary" id="record">+ Record contribution</button></div></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Member contributions table"><table><thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Target</th><th scope="col">Still due</th><th scope="col">Status</th><th scope="col" id="action-column" hidden>Action</th></tr></thead><tbody id="ledger"></tbody></table></div>
 </section>
-<footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><a class="link" href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out</a></footer>
+<footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form></footer>
 </main>
 <dialog id="dialog"><form id="form"><h2 id="form-title"></h2><p id="form-detail"></p><div id="fields"></div><p class="form-error" id="error" role="alert"></p><div class="dialog-actions"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn primary" id="submit" type="submit">Save</button></div></form></dialog>
 <script>
@@ -46,18 +46,12 @@ const dateOf = value => new Date(value + "-01T12:00:00");
 const monthLabel = value => dateOf(value).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 const number = new Intl.NumberFormat("en-UG");
 const money = amount => "UGX " + number.format(amount);
-const demo = {
-  demo: true,
-  members: ["Amina N.", "Daniel K.", "Grace A.", "Joseph M.", "Mariam S.", "Peter O."].map((name, i) => ({id: String(i), name, since: monthKey(new Date(clock.getFullYear(), clock.getMonth() - 1, 1))})),
-  amounts: {[current]: {"0": 50000, "1": 50000, "2": 32500, "3": 50000, "4": 20000}, [monthKey(new Date(clock.getFullYear(), clock.getMonth() - 1, 1))]: {"0": 50000, "1": 40000, "2": 50000, "3": 50000, "4": 50000, "5": 50000}}
-};
 let state = {members:[], amounts:{}};
 let revision = 0;
 let monthlyTarget = 0;
 let canEdit = false;
 let saving = false;
 let loaded = false;
-let sample = false;
 const active = () => state.members.filter(member => member.since <= month);
 const amountFor = member => state.amounts[month]?.[member.id] ?? 0;
 const dialog = el("dialog");
@@ -73,7 +67,6 @@ function render() {
   el("prev").disabled = month === "1900-01";
   el("next").disabled = month === "9999-12";
   el("period").textContent = monthLabel(month) + " · " + active().length + " active members";
-  el("demo-badge").hidden = !sample;
   el("role").textContent = canEdit ? "Accountant" : "View only";
   el("actions").hidden = el("action-column").hidden = !canEdit;
   el("record").disabled = active().length === 0;
@@ -127,16 +120,15 @@ function render() {
 async function loadLedger() {
   try {
     const response = await fetch("/api/ledger", {cache:"no-store"});
+    if (response.status === 401) return location.replace("/");
     if (!response.ok) throw new Error();
     const result = await response.json();
     loaded = true;
-    sample = !result.configured;
-    state = sample ? demo : result.ledger;
+    state = result.ledger;
     monthlyTarget = result.monthlyTarget;
     revision = result.revision;
     canEdit = result.canEdit;
-    el("notice").hidden = !sample;
-    el("notice").textContent = "You’re viewing sample data. Editing unlocks after the accountant’s sign-in email is configured.";
+    el("notice").hidden = true;
   } catch {
     el("notice").hidden = false;
     el("notice").textContent = "The shared ledger could not be loaded. Refresh this page to try again.";
@@ -155,6 +147,7 @@ async function save(next, message) {
       body:JSON.stringify({revision, ledger:next})
     });
     const result = await response.json();
+    if (response.status === 401) return location.replace("/");
     if (!response.ok) {
       el("error").textContent = result.error;
       if (response.status === 409) {
@@ -270,5 +263,6 @@ loadLedger();
 </script>
 </body>
 </html>
+
 
 

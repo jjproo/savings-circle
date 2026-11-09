@@ -40,21 +40,23 @@ function applyTarget(ledger) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const signedIn = Boolean(request.headers.get("oai-authenticated-user-id"));
+    if (url.pathname === "/login" || url.pathname === "/logout") {
+      return changeSession(request, url, env);
+    }
+    const role = await sessionRole(request, env);
     if (url.pathname === "/" && request.method === "GET") {
-      if (!signedIn) return Response.redirect(new URL("/signin-with-chatgpt?return_to=%2F", url), 302);
-      return new Response(page, { headers: {...safeHeaders, "Content-Type": "text/html; charset=utf-8",
-        "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'"} });
+      const notice = url.searchParams.has("failed") ? '<p role="alert">That access code didn’t match. Try again.</p>' : "";
+      const content = role ? page : signInPage.replace("{{notice}}", notice);
+      return new Response(content, { headers: {...safeHeaders, "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'"} });
     }
     if (url.pathname !== "/api/ledger") return reply({error:"Page not found."}, 404);
-    if (!signedIn) return reply({error:"Sign in to see the ledger."}, 401);
-    const email = request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase();
-    const accountant = env.ACCOUNTANT_EMAIL?.trim().toLowerCase();
-    const canEdit = Boolean(accountant && email === accountant);
+    if (!role) return reply({error:"Sign in to see the ledger."}, 401);
+    const canEdit = role === "accountant";
     try {
       if (request.method === "GET") {
         const row = await env.DB.prepare("SELECT revision, data FROM savings_ledger WHERE id = 1").first();
-        return reply({revision:row.revision, ledger:applyTarget(JSON.parse(row.data)), monthlyTarget, canEdit, configured:Boolean(accountant)});
+        return reply({revision:row.revision, ledger:applyTarget(JSON.parse(row.data)), monthlyTarget, canEdit});
       }
       if (request.method !== "PUT") return reply({error:"Method not allowed."}, 405);
       if (!canEdit) return reply({error:"Only the accountant can edit the ledger."}, 403);
