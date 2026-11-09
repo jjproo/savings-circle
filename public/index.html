@@ -66,7 +66,7 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 <section class="panel" aria-labelledby="registration-fees-title">
 <div class="panel-head"><div><h2 id="registration-fees-title">Registration fees</h2><p id="registration-total"></p></div></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Registration fees table">
-<table><thead><tr><th scope="col">Member</th><th scope="col">First savings month</th><th scope="col">Fee received</th><th scope="col" id="registration-action" hidden>Action</th></tr></thead>
+<table><thead><tr><th scope="col">Member</th><th scope="col">First savings month</th><th scope="col">Last savings month</th><th scope="col">Fee received</th><th scope="col" id="registration-action" hidden>Actions</th></tr></thead>
 <tbody id="registration-rows"></tbody></table>
 </div></section></section>
 <footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form></footer>
@@ -95,7 +95,9 @@ let canEdit = false;
 let saving = false;
 let loaded = false;
 let view = "savings";
-const active = (period = month) => state.members.filter(member => member.since <= period);
+const active = (period = month) => state.members.filter(member =>
+  member.since <= period && (!member.lastMonth || period <= member.lastMonth)
+);
 const amountFor = (member, period = month) => state.amounts[period]?.[member.id] ?? 0;
 function monthlyRows(period) {
   return active(period).map(member => {
@@ -185,20 +187,30 @@ function renderRegistration() {
     const row = table.insertRow();
     row.insertCell().textContent = member.name;
     row.insertCell().textContent = monthLabel(member.since);
+    row.insertCell().textContent = member.lastMonth ? monthLabel(member.lastMonth) : "Ongoing";
     row.insertCell().textContent = fee ? money(fee) : "No fee recorded";
     if (canEdit) {
-      const edit = document.createElement("button");
-      edit.className = "btn edit";
-      edit.textContent = "Edit fee";
-      edit.setAttribute("aria-label", "Edit registration fee for " + member.name);
-      edit.addEventListener("click", () => editRegistrationFee(member));
-      row.insertCell().append(edit);
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      for (const [label, description, handler] of [
+        ["Edit name", "Edit name for ", editMemberName],
+        ["Edit fee", "Edit registration fee for ", editRegistrationFee],
+        [member.lastMonth ? "Edit leaving month" : "Mark as left", "Set last savings month for ", setLastMonth],
+      ]) {
+        const button = document.createElement("button");
+        button.className = "btn edit";
+        button.textContent = label;
+        button.setAttribute("aria-label", description + member.name);
+        button.addEventListener("click", () => handler(member));
+        actions.append(button);
+      }
+      row.insertCell().append(actions);
     }
   }
   el("registration-total").textContent = loaded ? money(fees) + " received from registration fees" : "";
   if (!state.members.length) {
     const cell = table.insertRow().insertCell();
-    cell.colSpan = canEdit ? 4 : 3;
+    cell.colSpan = canEdit ? 5 : 4;
     cell.className = "empty";
     cell.textContent = loaded ? "No members registered yet." : "No registration data to display yet.";
   }
@@ -393,9 +405,39 @@ function editRegistrationFee(member) {
   const fee = input("fee", "number");
   fee.value = member.registrationFee ?? 0;
   openForm("Edit registration fee", member.name + " · Enter the total fee received.", [field("Registration fee received (UGX)", fee)], "Save fee", data => {
-    const members = state.members.map(entry => entry.id === member.id
-      ? {...entry, registrationFee:Number(data.get("fee"))} : entry);
-    save({...state, members}, "Registration fee saved.");
+    updateMember(member, {registrationFee:Number(data.get("fee"))}, "Registration fee saved.");
+  });
+}
+function updateMember(member, changes, message) {
+  const members = state.members.map(entry => entry.id === member.id ? {...entry, ...changes} : entry);
+  save({...state, members}, message);
+}
+function editMemberName(member) {
+  const name = input("name", "text");
+  Object.assign(name, {value:member.name, maxLength:70});
+  openForm("Edit member name", "The updated name will appear on this member’s existing records.", [field("Member name", name)], "Save name", data => {
+    const value = data.get("name").trim();
+    if (!value) {
+      el("error").textContent = "Enter a member name.";
+      return;
+    }
+    updateMember(member, {name:value}, "Member name updated.");
+  });
+}
+function setLastMonth(member) {
+  const latestPaidMonth = Object.keys(state.amounts).sort().reverse().find(period =>
+    amountFor(member, period) > 0
+  );
+  const earliest = latestPaidMonth ?? member.since;
+  const current = kampalaDate().slice(0, 7);
+  const lastMonth = input("lastMonth", "month");
+  Object.assign(lastMonth, {
+    min:earliest, max:"9999-12", value:member.lastMonth ?? (current < earliest ? earliest : current)
+  });
+  const title = member.lastMonth ? "Edit leaving month" : "Mark as left";
+  const detail = "Choose the final month this member should appear in savings. Earlier contributions and the registration fee stay on record.";
+  openForm(title, detail, [field("Last savings month", lastMonth)], "Save leaving month", data => {
+    updateMember(member, {lastMonth:data.get("lastMonth")}, "Leaving month saved.");
   });
 }
 el("add").addEventListener("click", addMember);
