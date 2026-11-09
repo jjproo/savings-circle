@@ -5,15 +5,19 @@ import worker from "./dist/server/index.js";
 
 const database = new DatabaseSync(":memory:");
 database.exec(readFileSync("drizzle/0000_savings_ledger.sql", "utf8"));
+database.exec(readFileSync("drizzle/0001_sign_in_limits.sql", "utf8"));
 const DB = { prepare(sql) {
   const stmt = database.prepare(sql);
   return {
     first: () => stmt.get(),
-    bind: (...args) => ({run: () => ({meta: {changes:stmt.run(...args).changes}})}),
+    bind: (...args) => ({
+      first: () => stmt.get(...args),
+      run: () => ({meta: {changes:stmt.run(...args).changes}}),
+    }),
   };
 } };
 const origin = "https://savings.example";
-const env = {DB, ACCOUNTANT_ACCESS_CODE:"A".repeat(32), MEMBER_ACCESS_CODE:"M".repeat(32)};
+const env = {DB, ACCOUNTANT_ACCESS_CODE:"test.admin", MEMBER_ACCESS_CODE:"test.member", SESSION_SIGNING_KEY:"test-key"};
 const ledger = {members:[{id:"m1",name:"Member One",target:100000,since:"2026-11"}],amounts:{"2026-11":{m1:65000}}};
 function send(cookie, options = {}) {
   const headers = new Headers(options.headers);
@@ -34,6 +38,10 @@ assert.equal((await send(accountantCookie, {env:{...env, ACCOUNTANT_ACCESS_CODE:
 assert.equal((await send(null, {headers:{"oai-authenticated-user-id":"injected"}})).status, 401);
 const logout = await send(accountantCookie,{path:"/logout", method:"POST", headers:{origin}});
 assert.match(logout.headers.get("Set-Cookie"), /Max-Age=0/);
+for (let i = 0; i < 7; i++) {
+  assert.equal((await signIn("wrong")).headers.get("Location"), "/?failed=1");
+}
+assert.equal((await signIn(env.ACCOUNTANT_ACCESS_CODE)).headers.get("Location"), "/?failed=limited");
 const put = {method:"PUT",headers:{origin,"content-type":"application/json"},body:JSON.stringify({revision:0,ledger})};
 assert.equal((await send(null)).status, 401);
 assert.equal((await send(memberCookie, put)).status, 403);

@@ -41,11 +41,18 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/login" || url.pathname === "/logout") {
-      return changeSession(request, url, env);
+      try {
+        return await changeSession(request, url, env);
+      } catch {
+        return reply({error:"Sign-in is temporarily unavailable."}, 503);
+      }
     }
     const role = await sessionRole(request, env);
     if (url.pathname === "/" && request.method === "GET") {
-      const notice = url.searchParams.has("failed") ? '<p role="alert">That access code didn’t match. Try again.</p>' : "";
+      const failure = url.searchParams.get("failed");
+      const notice = failure === "limited"
+        ? '<p role="alert">Too many sign-in attempts. Try again in a few minutes.</p>'
+        : failure ? '<p role="alert">That access code didn’t match. Try again.</p>' : "";
       const content = role ? page : signInPage.replace("{{notice}}", notice);
       return new Response(content, { headers: {...safeHeaders, "Content-Type": "text/html; charset=utf-8",
         "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'"} });
