@@ -22,8 +22,9 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 .report summary{cursor:pointer;padding:15px 21px;font-weight:750}
 .report .report-caption{padding:0 21px 12px}
 .report tfoot{background:#f6f8f2;font-weight:750}
-.views{display:flex;gap:8px;margin:0 0 20px}
+.views{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
 .views button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}
+.totals-metrics{grid-template-columns:1fr 1fr}
 </style>
 </head>
 <body>
@@ -32,6 +33,7 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 <nav class="views" aria-label="Savings Circle sections">
 <button class="btn" id="show-savings" aria-controls="savings" aria-pressed="true">Monthly savings</button>
 <button class="btn" id="show-registration" aria-controls="registration" aria-pressed="false">Registration</button>
+<button class="btn" id="show-totals" aria-controls="totals" aria-pressed="false">Totals</button>
 </nav>
 <p id="notice" class="notice" role="status">Loading the shared ledger…</p>
 <section id="savings" aria-label="Monthly savings">
@@ -61,13 +63,25 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 </section>
 <section id="registration" aria-labelledby="registration-title" hidden>
 <p class="eyebrow">Member register</p>
-<div class="heading"><div><h1 id="registration-title">Registration</h1><p>One-time registration fees and member start months.</p></div>
+<div class="heading"><div><h1 id="registration-title">Registration</h1><p>Each member pays the registration fee once when they join.</p></div>
 <button class="btn primary" id="new-joiner" hidden>+ New joiner</button></div>
 <section class="panel" aria-labelledby="registration-fees-title">
 <div class="panel-head"><div><h2 id="registration-fees-title">Registration fees</h2><p id="registration-total"></p></div></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Registration fees table">
 <table><thead><tr><th scope="col">Member</th><th scope="col">First savings month</th><th scope="col">Last savings month</th><th scope="col">Fee received</th><th scope="col" id="registration-action" hidden>Actions</th></tr></thead>
 <tbody id="registration-rows"></tbody></table>
+</div></section></section>
+<section id="totals" aria-labelledby="totals-title" hidden>
+<p class="eyebrow">All months</p>
+<div class="heading"><div><h1 id="totals-title">Collection totals</h1><p>See what the group has collected since it started.</p></div></div>
+<div class="metrics totals-metrics" aria-label="All-time totals">
+<div class="metric"><div class="label">Total savings collected</div><div id="all-savings" class="value"></div><div class="detail">Monthly contributions across all years</div></div>
+<div class="metric"><div class="label">Total registration fees</div><div id="all-registration" class="value"></div><div class="detail">Fees paid once when members join</div></div>
+</div>
+<section class="panel" aria-labelledby="history-title">
+<div class="panel-head"><div><h2 id="history-title">Monthly collections</h2><p>Months with recorded savings contributions</p></div></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Monthly collections table">
+<table><thead><tr><th scope="col">Month</th><th scope="col">Savings collected</th></tr></thead><tbody id="collection-rows"></tbody></table>
 </div></section></section>
 <footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form></footer>
 </main>
@@ -176,14 +190,15 @@ function flash(message, error = false) {
   el("flash").textContent = message;
   el("flash").classList.toggle("error", error);
 }
+function registrationTotal() {
+  return state.members.reduce((total, member) => total + (member.registrationFee ?? 0), 0);
+}
 function renderRegistration() {
   el("new-joiner").hidden = el("registration-action").hidden = !canEdit;
   const table = el("registration-rows");
   table.replaceChildren();
-  let fees = 0;
   for (const member of state.members) {
     const fee = member.registrationFee ?? 0;
-    fees += fee;
     const row = table.insertRow();
     row.insertCell().textContent = member.name;
     row.insertCell().textContent = monthLabel(member.since);
@@ -207,7 +222,7 @@ function renderRegistration() {
       row.insertCell().append(actions);
     }
   }
-  el("registration-total").textContent = loaded ? money(fees) + " received from registration fees" : "";
+  el("registration-total").textContent = loaded ? money(registrationTotal()) + " received from registration fees" : "";
   if (!state.members.length) {
     const cell = table.insertRow().insertCell();
     cell.colSpan = canEdit ? 5 : 4;
@@ -215,15 +230,37 @@ function renderRegistration() {
     cell.textContent = loaded ? "No members registered yet." : "No registration data to display yet.";
   }
 }
+function renderTotals() {
+  const table = el("collection-rows");
+  table.replaceChildren();
+  let savings = 0n;
+  for (const period of Object.keys(state.amounts).sort()) {
+    const collected = Object.values(state.amounts[period]).reduce((total, amount) => total + amount, 0);
+    if (!collected) continue;
+    savings += BigInt(collected);
+    const row = table.insertRow();
+    row.insertCell().textContent = monthLabel(period);
+    row.insertCell().textContent = money(collected);
+  }
+  el("all-savings").textContent = loaded ? money(savings) : "—";
+  el("all-registration").textContent = loaded ? money(registrationTotal()) : "—";
+  if (!table.rows.length) {
+    const cell = table.insertRow().insertCell();
+    cell.colSpan = 2;
+    cell.className = "empty";
+    cell.textContent = loaded ? "No contributions recorded yet." : "No collections data to display yet.";
+  }
+}
 function showView(nextView) {
   view = nextView;
-  for (const section of ["savings", "registration"]) {
+  for (const section of ["savings", "registration", "totals"]) {
     const selected = section === view;
     el(section).hidden = !selected;
     el("show-" + section).setAttribute("aria-pressed", String(selected));
   }
   flash("");
   if (view === "registration") renderRegistration();
+  if (view === "totals") renderTotals();
 }
 function render() {
   const rows = monthlyRows(month);
@@ -276,6 +313,7 @@ function render() {
   renderReminder(rows, due);
   renderReport();
   if (view === "registration") renderRegistration();
+  if (view === "totals") renderTotals();
 }
 async function loadLedger() {
   try {
@@ -390,7 +428,7 @@ function addMember() {
   const fee = input("fee", "number");
   fee.required = false;
   const fields = [field("Member name", name), field("First savings month", since), field("Registration fee received (UGX)", fee)];
-  openForm("New joiner", "The member will appear from their first savings month onward. Enter a fee if it has been received.", fields, "Add member", data => {
+  openForm("New joiner", "Choose the first savings month and enter the one-time registration fee if received.", fields, "Add member", data => {
     const value = data.get("name").trim();
     if (!value) {
       el("error").textContent = "Enter a member name.";
@@ -444,6 +482,7 @@ el("add").addEventListener("click", addMember);
 el("new-joiner").addEventListener("click", addMember);
 el("show-savings").addEventListener("click", () => showView("savings"));
 el("show-registration").addEventListener("click", () => showView("registration"));
+el("show-totals").addEventListener("click", () => showView("totals"));
 el("form").addEventListener("submit", event => {
   event.preventDefault();
   action(new FormData(event.currentTarget));
