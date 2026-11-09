@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Track how much every member contributes to your savings group each month.">
+<title>Savings Circle | Monthly contributions</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#18291f;background:#f5f6ef;line-height:1.5;--green:#173a2a;--muted:#536459;--border:#e0e5d9;--lime:#d9f780}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #568838;outline-offset:3px}
+.wrap{width:min(1080px,calc(100% - 64px));margin:auto}.top{border-bottom:1px solid var(--border);background:#fbfcf7}.top .wrap{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:11px;font-size:17px;font-weight:750;letter-spacing:-.025em}.mark{width:36px;height:36px;display:grid;place-items:center;background:var(--green);color:var(--lime);border-radius:11px}.badge{font-size:12px;font-weight:700;background:#ebefdf;padding:5px 12px;border-radius:30px;color:#405344}[hidden]{display:none!important}.head-badges{display:flex;gap:6px;align-items:center}.notice{background:#ebefdf;color:#334d39;border-radius:9px;padding:9px 14px;margin-bottom:14px;font-size:13px}
+main{padding:38px 0 22px}.eyebrow{color:#4e674f;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin:0 0 7px}.heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:23px}h1,h2,p{margin:0}h1{font-size:clamp(30px,5vw,46px);letter-spacing:-.062em;line-height:1.08}h1+p,.panel p{color:var(--muted);margin-top:8px;font-size:14px}.month{display:flex;align-items:center;gap:2px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:3px;flex-shrink:0}.month button{font-size:20px;border:0;background:none;color:var(--green);width:33px;height:34px;border-radius:6px}.month button:hover{background:#edf1e8}.month input{width:153px;padding:4px 2px;border:0;color:#244132;background:#fff;font-size:13px;font-weight:650}
+.metrics{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:15px;margin-bottom:24px}.metric{min-width:0;position:relative;overflow:hidden;background:#fff;border:1px solid var(--border);border-radius:16px;padding:19px 21px}.metric.hero{background:var(--green);border-color:var(--green);color:#fff}.hero .label,.hero .detail{color:#d0e3d4}.hero .value{color:#ecf9d9}.motif{position:absolute;right:-24px;top:-33px;width:177px;height:177px;color:#b9eb80;opacity:.19;pointer-events:none}.metric>*:not(svg){position:relative}.label{font-weight:700;color:var(--muted);font-size:13px}.value{font-size:clamp(21px,3vw,35px);letter-spacing:-.055em;font-weight:760;line-height:1.2;margin:6px 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.detail{font-size:12px;color:var(--muted)}.progress{height:5px;background:#ffffff30;border-radius:8px;margin-top:11px;overflow:hidden}.progress span{display:block;background:var(--lime);height:100%;border-radius:8px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden}.panel-head{padding:17px 21px;display:flex;justify-content:space-between;align-items:center;gap:12px}.panel h2{font-size:20px;letter-spacing:-.035em}.panel p{margin-top:2px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:7px 12px;background:#fff;color:#254432;border:1px solid #d6e0d1;border-radius:8px;font-size:13px;font-weight:720;white-space:nowrap}.btn:hover{background:#eff4ea}.btn.primary{background:var(--lime);border-color:var(--lime);color:#193520}.btn.primary:hover{background:#c9ec69}.btn:disabled{opacity:.45;cursor:default}.edit{min-height:33px;padding:4px 10px}
+table{border-collapse:collapse;width:100%;font-size:13px;text-align:left;font-variant-numeric:tabular-nums}th,td{padding:10px 14px;border-top:1px solid #e9ede4}th:first-child,td:first-child{padding-left:21px}th:last-child,td:last-child{padding-right:21px;text-align:right}th{background:#f6f8f2;font-size:11px;color:#4f6253;text-transform:uppercase;letter-spacing:.075em;white-space:nowrap}td{height:52px}td:nth-child(2){font-weight:700}.person{display:flex;align-items:center;gap:10px;font-weight:690;min-width:115px;overflow-wrap:anywhere}.avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:11px;flex:none;background:#e1efdb;color:#2d5837}.avatar[data-color="1"]{background:#f5e9d1;color:#745322}.avatar[data-color="2"]{background:#dfeaf2;color:#365a73}.avatar[data-color="3"]{background:#eee3f2;color:#685078}.status{display:inline-block;border-radius:15px;padding:3px 8px;font-size:11px;white-space:nowrap;font-weight:700;background:#eef0e9;color:#4f5c50}.paid{background:#e2f1dc;color:#2a5b35}.partial{background:#fbefd1;color:#765518}.table-scroll{overflow:auto}.empty{padding:30px;text-align:center!important;color:var(--muted)}footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;font-size:12px;color:var(--muted)}.link{border:0;background:none;color:#385a3b;padding:5px 0;text-decoration:underline;text-underline-offset:3px}.flash{color:#285c36;font-weight:700;min-height:18px}.flash.error{color:#a12d27}
+dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-radius:16px;padding:22px;color:#18291f;box-shadow:0 20px 70px #14251935}dialog::backdrop{background:#0a211a78}dialog h2{font-size:22px;letter-spacing:-.04em}dialog p{font-size:14px;color:var(--muted);margin:4px 0 16px}dialog label{display:block;font-size:13px;font-weight:700;margin-bottom:12px}dialog label input,dialog label select{display:block;width:100%;margin-top:4px;padding:8px 10px;border:1px solid #bdccba;border-radius:8px;background:#fff;color:#18291f}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:19px}.form-error{color:#a12d27;margin:0;min-height:1em}
+@media(max-width:700px){.wrap{width:calc(100% - 30px)}.top .wrap{height:60px}main{padding-top:24px}.heading{align-items:start;flex-direction:column}.metrics{grid-template-columns:1fr 1fr;gap:9px}.hero{grid-column:1/-1}.metric{padding:13px}.panel-head{align-items:start;flex-direction:column;padding:14px}.panel p{font-size:13px}th,td{padding:8px}th:first-child,td:first-child{padding-left:12px}th:last-child,td:last-child{padding-right:12px}.avatar{display:none}footer{align-items:start}.person{min-width:90px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><div class="brand"><span class="mark" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(45 12 12)"/><ellipse cx="12" cy="12" rx="4" ry="8" transform="rotate(-45 12 12)"/></svg></span>Savings Circle</div><div class="head-badges"><span id="demo-badge" class="badge" hidden>Sample data</span><span id="role" class="badge">View only</span></div></div></header>
+<main class="wrap">
+<p class="eyebrow">Group savings tracker</p>
+<div class="heading"><div><h1>Monthly contributions</h1><p>See what each member has saved and how much is still due.</p></div>
+<div class="month"><button id="prev" aria-label="Previous month">&#8249;</button><input id="month" type="month" min="1900-01" max="9999-12" aria-label="Contribution month"><button id="next" aria-label="Next month">&#8250;</button></div></div>
+<p id="notice" class="notice" role="status">Loading the shared ledger…</p><section class="metrics" aria-label="Monthly summary">
+<div class="metric hero"><svg class="motif" viewBox="0 0 160 160" fill="none" stroke="currentColor"><circle cx="80" cy="80" r="65"/><ellipse cx="80" cy="80" rx="25" ry="65"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(30 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(60 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(90 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(120 80 80)"/><ellipse cx="80" cy="80" rx="25" ry="65" transform="rotate(150 80 80)"/></svg><div class="label">Total contributed</div><div id="total" class="value"></div><div id="progress-label" class="detail"></div><div class="progress" aria-hidden="true"><span id="progress"></span></div></div>
+<div class="metric"><div class="label">Still due</div><div id="due" class="value"></div><div class="detail">Across member targets</div></div>
+<div class="metric"><div class="label">Members paid in full</div><div id="paid-count" class="value"></div><div id="paid-detail" class="detail"></div></div>
+</section>
+<section class="panel" aria-labelledby="list-title">
+<div class="panel-head"><div><h2 id="list-title">Member ledger</h2><p id="period"></p></div><div class="actions" id="actions" hidden><button class="btn" id="add">Add member</button><button class="btn primary" id="record">+ Record contribution</button></div></div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Member contributions table"><table><thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Target</th><th scope="col">Still due</th><th scope="col">Status</th><th scope="col" id="action-column" hidden>Action</th></tr></thead><tbody id="ledger"></tbody></table></div>
+</section>
+<footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><a class="link" href="/signout-with-chatgpt?return_to=%2F" target="_top">Sign out</a></footer>
+</main>
+<dialog id="dialog"><form id="form"><h2 id="form-title"></h2><p id="form-detail"></p><div id="fields"></div><p class="form-error" id="error" role="alert"></p><div class="dialog-actions"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn primary" id="submit" type="submit">Save</button></div></form></dialog>
+<script>
+"use strict";
+const el = id => document.getElementById(id);
+const clock = new Date();
+const monthKey = date => date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+const current = monthKey(clock);
+let month = current;
+const dateOf = value => new Date(value + "-01T12:00:00");
+const monthLabel = value => dateOf(value).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+const number = new Intl.NumberFormat("en-UG");
+const money = amount => "UGX " + number.format(amount);
+const demo = {
+  demo: true,
+  members: ["Amina N.", "Daniel K.", "Grace A.", "Joseph M.", "Mariam S.", "Peter O."].map((name, i) => ({id: String(i), name, since: monthKey(new Date(clock.getFullYear(), clock.getMonth() - 1, 1))})),
+  amounts: {[current]: {"0": 50000, "1": 50000, "2": 32500, "3": 50000, "4": 20000}, [monthKey(new Date(clock.getFullYear(), clock.getMonth() - 1, 1))]: {"0": 50000, "1": 40000, "2": 50000, "3": 50000, "4": 50000, "5": 50000}}
+};
+let state = {members:[], amounts:{}};
+let revision = 0;
+let monthlyTarget = 0;
+let canEdit = false;
+let saving = false;
+let loaded = false;
+let sample = false;
+const active = () => state.members.filter(member => member.since <= month);
+const amountFor = member => state.amounts[month]?.[member.id] ?? 0;
+const dialog = el("dialog");
+dialog.setAttribute("aria-labelledby", "form-title");
+let action;
+let returnFocus;
+function flash(message, error = false) {
+  el("flash").textContent = message;
+  el("flash").classList.toggle("error", error);
+}
+function render() {
+  el("month").value = month;
+  el("prev").disabled = month === "1900-01";
+  el("next").disabled = month === "9999-12";
+  el("period").textContent = monthLabel(month) + " · " + active().length + " active members";
+  el("demo-badge").hidden = !sample;
+  el("role").textContent = canEdit ? "Accountant" : "View only";
+  el("actions").hidden = el("action-column").hidden = !canEdit;
+  el("record").disabled = active().length === 0;
+  let total = 0, target = 0, due = 0, paid = 0, covered = 0;
+  const ledger = el("ledger");
+  ledger.replaceChildren();
+  for (const [index, member] of active().entries()) {
+    const amount = amountFor(member);
+    const balance = Math.max(0, monthlyTarget - amount);
+    total += amount;
+    target += monthlyTarget;
+    due += balance;
+    covered += Math.min(amount, monthlyTarget);
+    paid += Number(balance === 0);
+    const row = ledger.insertRow();
+    const person = document.createElement("div");
+    person.className = "person";
+    const avatar = document.createElement("span");
+    avatar.className = "avatar";
+    avatar.dataset.color = String(index % 4);
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent = member.name.split(/\s+/).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
+    person.append(avatar, document.createTextNode(member.name));
+    row.insertCell().append(person);
+    for (const value of [amount, monthlyTarget, balance]) row.insertCell().textContent = money(value);
+    const status = document.createElement("span");
+    status.className = "status" + (balance === 0 ? " paid" : amount > 0 ? " partial" : "");
+    status.textContent = balance === 0 ? "Paid" : amount > 0 ? "Partial" : "Pending";
+    row.insertCell().append(status);
+    const button = document.createElement("button");
+    button.className = "btn edit";
+    button.textContent = "Edit";
+    button.setAttribute("aria-label", "Edit contribution for " + member.name);
+    button.addEventListener("click", () => contribution(member, true));
+    if (canEdit) row.insertCell().append(button);
+  }
+  if (!active().length) {
+    const cell = ledger.insertRow().insertCell();
+    cell.colSpan = canEdit ? 6 : 5;
+    cell.className = "empty";
+    cell.textContent = !loaded ? "No ledger data to display yet." : canEdit ? "No active members this month. Add a member to begin." : "No active members this month.";
+  }
+  el("total").textContent = money(total);
+  el("due").textContent = money(due);
+  el("paid-count").textContent = paid + " / " + active().length;
+  el("paid-detail").textContent = paid === active().length && paid > 0 ? "All targets met" : "Reached their monthly target";
+  const progress = target ? Math.round(covered / target * 100) : 0;
+  el("progress-label").textContent = progress + "% of " + money(target) + " in member targets covered";
+  el("progress").style.width = progress + "%";
+}
+async function loadLedger() {
+  try {
+    const response = await fetch("/api/ledger", {cache:"no-store"});
+    if (!response.ok) throw new Error();
+    const result = await response.json();
+    loaded = true;
+    sample = !result.configured;
+    state = sample ? demo : result.ledger;
+    monthlyTarget = result.monthlyTarget;
+    revision = result.revision;
+    canEdit = result.canEdit;
+    el("notice").hidden = !sample;
+    el("notice").textContent = "You’re viewing sample data. Editing unlocks after the accountant’s sign-in email is configured.";
+  } catch {
+    el("notice").hidden = false;
+    el("notice").textContent = "The shared ledger could not be loaded. Refresh this page to try again.";
+  }
+  render();
+}
+async function save(next, message) {
+  if (!canEdit || saving) return;
+  saving = true;
+  el("submit").disabled = el("cancel").disabled = true;
+  el("error").textContent = "";
+  try {
+    const response = await fetch("/api/ledger", {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({revision, ledger:next})
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      el("error").textContent = result.error;
+      if (response.status === 409) {
+        await loadLedger();
+        el("cancel").disabled = false;
+        return;
+      }
+    } else {
+      revision = result.revision;
+      state = next;
+      dialog.close();
+      render();
+      if (returnFocus && !returnFocus.isConnected) el("add").focus();
+      flash(message);
+    }
+  } catch {
+    el("error").textContent = "The change could not be confirmed. Reload the ledger before trying again.";
+    await loadLedger();
+    el("cancel").disabled = false;
+    return;
+  } finally {
+    saving = false;
+  }
+  el("submit").disabled = el("cancel").disabled = false;
+}
+function openForm(title, detail, fields, submit, onSave) {
+  if (!canEdit) return;
+  el("submit").disabled = el("cancel").disabled = false;
+  returnFocus = document.activeElement;
+  el("form-title").textContent = title;
+  el("form-detail").textContent = detail;
+  el("fields").replaceChildren(...fields);
+  el("error").textContent = "";
+  el("submit").textContent = submit;
+  action = onSave;
+  dialog.showModal();
+}
+function field(label, control) {
+  const item = document.createElement("label");
+  item.append(label, control);
+  return item;
+}
+function input(name, type) {
+  const control = document.createElement("input");
+  control.name = name;
+  control.type = type;
+  control.required = true;
+  if (type === "number") Object.assign(control, {min: "0", max: "999999999999", step: "1", inputMode: "numeric"});
+  return control;
+}
+function contribution(member, edit) {
+  const amount = input("amount", "number");
+  let fields;
+  if (edit) {
+    amount.value = amountFor(member);
+    fields = [field("Monthly total (UGX)", amount)];
+  } else {
+    amount.min = "1";
+    const picker = document.createElement("select");
+    picker.name = "member";
+    for (const entry of active()) picker.add(new Option(entry.name, entry.id));
+    fields = [field("Member", picker), field("Contribution amount (UGX)", amount)];
+  }
+  openForm(edit ? "Edit monthly total" : "Record contribution", edit ? member.name + " · " + monthLabel(month) : "Add a payment for " + monthLabel(month) + ".", fields, "Save contribution", data => {
+    const id = edit ? member.id : data.get("member");
+    const prior = state.amounts[month] ?? {};
+    const updated = Number(data.get("amount")) + (edit ? 0 : prior[id] ?? 0);
+    if (updated > 999999999999) {
+      el("error").textContent = "Enter a smaller contribution amount.";
+      return;
+    }
+    save({...state, amounts: {...state.amounts, [month]: {...prior, [id]: updated}}}, "Contribution saved.");
+  });
+}
+el("add").addEventListener("click", () => {
+  const name = input("name", "text");
+  name.maxLength = 70;
+  openForm("Add member", "This member will appear from " + monthLabel(month) + " onward with a monthly target of " + money(monthlyTarget) + ".", [field("Member name", name)], "Add member", data => {
+    const value = data.get("name").trim();
+    if (!value) {
+      el("error").textContent = "Enter a member name.";
+      return;
+    }
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    save({...state, members: [...state.members, {id, name: value, since: month}]}, "Member added.");
+  });
+});
+el("form").addEventListener("submit", event => {
+  event.preventDefault();
+  action(new FormData(event.currentTarget));
+});
+el("cancel").addEventListener("click", () => dialog.close());
+dialog.addEventListener("cancel", event => { if (saving) event.preventDefault(); });
+el("record").addEventListener("click", () => contribution(null, false));
+function showMonth(value) {
+  month = value;
+  flash("");
+  render();
+}
+el("month").addEventListener("change", event => {
+  if (event.target.value && event.target.validity.valid) showMonth(event.target.value);
+  else event.target.value = month;
+});
+for (const [id, offset] of [["prev", -1], ["next", 1]]) {
+  el(id).addEventListener("click", () => {
+    const date = dateOf(month);
+    date.setMonth(date.getMonth() + offset);
+    showMonth(monthKey(date));
+  });
+}
+render();
+loadLedger();
+</script>
+</body>
+</html>
+
+
