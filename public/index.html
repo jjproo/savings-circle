@@ -15,6 +15,13 @@ main{padding:38px 0 22px}.eyebrow{color:#4e674f;font-size:11px;font-weight:800;l
 table{border-collapse:collapse;width:100%;font-size:13px;text-align:left;font-variant-numeric:tabular-nums}th,td{padding:10px 14px;border-top:1px solid #e9ede4}th:first-child,td:first-child{padding-left:21px}th:last-child,td:last-child{padding-right:21px;text-align:right}th{background:#f6f8f2;font-size:11px;color:#4f6253;text-transform:uppercase;letter-spacing:.075em;white-space:nowrap}td{height:52px}td:nth-child(2){font-weight:700}.person{display:flex;align-items:center;gap:10px;font-weight:690;min-width:115px;overflow-wrap:anywhere}.avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:11px;flex:none;background:#e1efdb;color:#2d5837}.avatar[data-color="1"]{background:#f5e9d1;color:#745322}.avatar[data-color="2"]{background:#dfeaf2;color:#365a73}.avatar[data-color="3"]{background:#eee3f2;color:#685078}.status{display:inline-block;border-radius:15px;padding:3px 8px;font-size:11px;white-space:nowrap;font-weight:700;background:#eef0e9;color:#4f5c50}.paid{background:#e2f1dc;color:#2a5b35}.partial{background:#fbefd1;color:#765518}.table-scroll{overflow:auto}.empty{padding:30px;text-align:center!important;color:var(--muted)}footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;font-size:12px;color:var(--muted)}.link{border:0;background:none;color:#385a3b;padding:5px 0;text-decoration:underline;text-underline-offset:3px}.flash{color:#285c36;font-weight:700;min-height:18px}.flash.error{color:#a12d27}
 dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-radius:16px;padding:22px;color:#18291f;box-shadow:0 20px 70px #14251935}dialog::backdrop{background:#0a211a78}dialog h2{font-size:22px;letter-spacing:-.04em}dialog p{font-size:14px;color:var(--muted);margin:4px 0 16px}dialog label{display:block;font-size:13px;font-weight:700;margin-bottom:12px}dialog label input,dialog label select{display:block;width:100%;margin-top:4px;padding:8px 10px;border:1px solid #bdccba;border-radius:8px;background:#fff;color:#18291f}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:19px}.form-error{color:#a12d27;margin:0;min-height:1em}
 @media(max-width:700px){.wrap{width:calc(100% - 30px)}.top .wrap{height:60px}main{padding-top:24px}.heading{align-items:start;flex-direction:column}.metrics{grid-template-columns:1fr 1fr;gap:9px}.hero{grid-column:1/-1}.metric{padding:13px}.panel-head{align-items:start;flex-direction:column;padding:14px}.panel p{font-size:13px}th,td{padding:8px}th:first-child,td:first-child{padding-left:12px}th:last-child,td:last-child{padding-right:12px}.avatar{display:none}footer{align-items:start}.person{min-width:90px}}
+.reminder{margin:0 0 16px;padding:12px 16px;border:1px solid var(--border);border-radius:10px;background:#f1f5e9}
+.reminder[data-status="overdue"]{background:#fbefd1;border-color:#ead29a}
+.reminder p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.report{margin-top:18px}
+.report summary{cursor:pointer;padding:15px 21px;font-weight:750}
+.report .report-caption{padding:0 21px 12px}
+.report tfoot{background:#f6f8f2;font-weight:750}
 </style>
 </head>
 <body>
@@ -28,20 +35,36 @@ dialog{width:min(420px,calc(100% - 34px));border:1px solid var(--border);border-
 <div class="metric"><div class="label">Still due</div><div id="due" class="value"></div><div class="detail">Across member targets</div></div>
 <div class="metric"><div class="label">Members paid in full</div><div id="paid-count" class="value"></div><div id="paid-detail" class="detail"></div></div>
 </section>
+<section id="reminder" class="reminder" aria-label="Payment reminder" hidden>
+<strong id="reminder-title"></strong><p id="reminder-detail"></p>
+</section>
 <section class="panel" aria-labelledby="list-title">
 <div class="panel-head"><div><h2 id="list-title">Member ledger</h2><p id="period"></p></div><div class="actions" id="actions" hidden><button class="btn" id="add">Add member</button><button class="btn primary" id="record">+ Record contribution</button></div></div>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Member contributions table"><table><thead><tr><th scope="col">Member</th><th scope="col">Contributed</th><th scope="col">Target</th><th scope="col">Still due</th><th scope="col">Status</th><th scope="col" id="action-column" hidden>Action</th></tr></thead><tbody id="ledger"></tbody></table></div>
 </section>
+<details id="reports" class="panel report" hidden>
+<summary>View savings report</summary>
+<p id="report-period" class="report-caption"></p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Savings report"><table>
+<thead><tr><th scope="col">Month</th><th scope="col">Contributed</th><th scope="col">Group target</th><th scope="col">Still due</th><th scope="col">Members paid</th></tr></thead>
+<tbody id="report-rows"></tbody><tfoot id="report-totals"></tfoot>
+</table></div>
+</details>
 <footer><div>Amounts in UGX.<div class="flash" id="flash" role="status"></div></div><form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form></footer>
 </main>
 <dialog id="dialog"><form id="form"><h2 id="form-title"></h2><p id="form-detail"></p><div id="fields"></div><p class="form-error" id="error" role="alert"></p><div class="dialog-actions"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn primary" id="submit" type="submit">Save</button></div></form></dialog>
 <script>
 "use strict";
 const el = id => document.getElementById(id);
-const clock = new Date();
 const monthKey = date => date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
-const current = monthKey(clock);
-let month = current;
+function kampalaDate() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone:"Africa/Kampala", year:"numeric", month:"2-digit", day:"2-digit"
+  }).formatToParts();
+  const fields = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return fields.year + "-" + fields.month + "-" + fields.day;
+}
+let month = kampalaDate().slice(0, 7);
 const dateOf = value => new Date(value + "-01T12:00:00");
 const monthLabel = value => dateOf(value).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 const number = new Intl.NumberFormat("en-UG");
@@ -52,8 +75,77 @@ let monthlyTarget = 0;
 let canEdit = false;
 let saving = false;
 let loaded = false;
-const active = () => state.members.filter(member => member.since <= month);
-const amountFor = member => state.amounts[month]?.[member.id] ?? 0;
+const active = (period = month) => state.members.filter(member => member.since <= period);
+const amountFor = (member, period = month) => state.amounts[period]?.[member.id] ?? 0;
+function monthlyRows(period) {
+  return active(period).map(member => {
+    const amount = amountFor(member, period);
+    return {member, amount, balance:Math.max(0, monthlyTarget - amount)};
+  });
+}
+function summarize(rows) {
+  const totals = {total:0, target:rows.length * monthlyTarget, due:0, paid:0, covered:0};
+  for (const {amount, balance} of rows) {
+    totals.total += amount;
+    totals.due += balance;
+    totals.paid += Number(balance === 0);
+    totals.covered += monthlyTarget - balance;
+  }
+  return totals;
+}
+function renderReminder(rows, due) {
+  const reminder = el("reminder");
+  reminder.hidden = !loaded || rows.length === 0;
+  if (reminder.hidden) return;
+  const date = month + "-01";
+  const today = kampalaDate();
+  const overdue = date < today && due > 0;
+  const outstanding = rows.filter(row => row.balance > 0).length;
+  reminder.dataset.status = overdue ? "overdue" : "";
+  el("reminder-title").textContent = !due ? "All monthly targets met"
+    : overdue ? "Payments overdue" : date === today ? "Payments due today" : "Upcoming payments";
+  const deadline = "Due 1 " + monthLabel(month) + ".";
+  el("reminder-detail").textContent = due
+    ? deadline + " " + money(due) + " outstanding across " + outstanding + (outstanding === 1 ? " member." : " members.")
+    : deadline;
+}
+function reportRow(table, label, totals, paid) {
+  const row = table.insertRow();
+  const heading = document.createElement("th");
+  heading.scope = "row";
+  heading.textContent = label;
+  row.append(heading);
+  for (const value of [money(totals.total), money(totals.target), money(totals.due), paid]) {
+    row.insertCell().textContent = value;
+  }
+}
+function renderReport() {
+  el("reports").hidden = !loaded;
+  if (!loaded) return;
+  const body = el("report-rows");
+  const footer = el("report-totals");
+  body.replaceChildren();
+  footer.replaceChildren();
+  const [year, through] = month.split("-");
+  el("report-period").textContent = year + " through " + monthLabel(month).split(" ")[0];
+  const totals = {total:0, target:0, due:0};
+  for (let i = 1; i <= Number(through); i++) {
+    const period = year + "-" + String(i).padStart(2, "0");
+    const rows = monthlyRows(period);
+    if (!rows.length) continue;
+    const summary = summarize(rows);
+    for (const key of Object.keys(totals)) totals[key] += summary[key];
+    reportRow(body, monthLabel(period), summary, summary.paid + " / " + rows.length);
+  }
+  if (body.rows.length) {
+    reportRow(footer, "Year to date", totals, "—");
+  } else {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 5;
+    cell.className = "empty";
+    cell.textContent = "There are no active members in this report period.";
+  }
+}
 const dialog = el("dialog");
 dialog.setAttribute("aria-labelledby", "form-title");
 let action;
@@ -63,24 +155,18 @@ function flash(message, error = false) {
   el("flash").classList.toggle("error", error);
 }
 function render() {
+  const rows = monthlyRows(month);
+  const {total, target, due, paid, covered} = summarize(rows);
   el("month").value = month;
   el("prev").disabled = month === "1900-01";
   el("next").disabled = month === "9999-12";
-  el("period").textContent = monthLabel(month) + " · " + active().length + " active members";
+  el("period").textContent = monthLabel(month) + " · " + rows.length + " active members";
   el("role").textContent = canEdit ? "Accountant" : "View only";
   el("actions").hidden = el("action-column").hidden = !canEdit;
-  el("record").disabled = active().length === 0;
-  let total = 0, target = 0, due = 0, paid = 0, covered = 0;
+  el("record").disabled = rows.length === 0;
   const ledger = el("ledger");
   ledger.replaceChildren();
-  for (const [index, member] of active().entries()) {
-    const amount = amountFor(member);
-    const balance = Math.max(0, monthlyTarget - amount);
-    total += amount;
-    target += monthlyTarget;
-    due += balance;
-    covered += Math.min(amount, monthlyTarget);
-    paid += Number(balance === 0);
+  for (const [index, {member, amount, balance}] of rows.entries()) {
     const row = ledger.insertRow();
     const person = document.createElement("div");
     person.className = "person";
@@ -103,7 +189,7 @@ function render() {
     button.addEventListener("click", () => contribution(member, true));
     if (canEdit) row.insertCell().append(button);
   }
-  if (!active().length) {
+  if (!rows.length) {
     const cell = ledger.insertRow().insertCell();
     cell.colSpan = canEdit ? 6 : 5;
     cell.className = "empty";
@@ -111,11 +197,13 @@ function render() {
   }
   el("total").textContent = money(total);
   el("due").textContent = money(due);
-  el("paid-count").textContent = paid + " / " + active().length;
-  el("paid-detail").textContent = paid === active().length && paid > 0 ? "All targets met" : "Reached their monthly target";
+  el("paid-count").textContent = paid + " / " + rows.length;
+  el("paid-detail").textContent = paid === rows.length && paid > 0 ? "All targets met" : "Reached their monthly target";
   const progress = target ? Math.round(covered / target * 100) : 0;
   el("progress-label").textContent = progress + "% of " + money(target) + " in member targets covered";
   el("progress").style.width = progress + "%";
+  renderReminder(rows, due);
+  renderReport();
 }
 async function loadLedger() {
   try {
